@@ -21,32 +21,50 @@
 #
 
 import linkahead as db
+from caosadvancedtools.models.parser import parse_model_from_string
+
+from fw_get_contributors import get_contributors
 
 
 def _insert_model():
-    # This would probably be replaced by reading in e.g., a YAML file with the
-    # datamodel in a real production use case.
-    contrib_rt = db.RecordType(name="Contributor")
-    full_name_prop = db.Property(name="Full name", datatype=db.TEXT)
-    # All contributors have to have a name
-    contrib_rt.add_property(full_name_prop, importance=db.OBLIGATORY)
-    db.Container().exetend([contrib_rt, full_name_prop]).insert()
 
-    return contrib_rt, full_name_prop
+    yaml_string = """
+Contributor:
+  obligatory_properties:
+    Full name:
+      datatype: TEXT
+    fw_uuid:
+      datatype: TEXT
+  recommended_properties:
+    Email:
+      datatype: TEXT
+    ORCID:
+      datatype: TEXT
+    """
+    model = parse_model_from_string(yaml_string)
+    model.sync_data_model(noquestion=True)
 
 
-def insert_contributors(list_of_names: list[str], create_model: bool = False):
+def insert_contributors(list_of_contribs: list[dict], create_model: bool = False):
 
     if create_model:
-        contrib_rt, full_name_prop = _insert_model()
-    else:
-        contrib_rt = db.RecordType(name="Contributor").retrieve()
-        full_name_prop = db.Propert(name="Full name").retrieve()
+        _insert_model()
+
+    contrib_rt = db.RecordType(name="Contributor").retrieve()
+    full_name_prop = db.Property(name="Full name").retrieve()
+    uuid_prop = db.Property(name="fw_uuid").retrieve()
+    email_prop = db.Property(name="Email").retrieve()
+    orcid_prop = db.Property(name="ORCID").retrieve()
 
     inserts = db.Container()
-    for name in list_of_names:
-        rec = db.Record(name=name).add_parent(contrib_rt)
-        rec.add_property(full_name_prop, value=name)
+    for contr in list_of_contribs:
+        rec = db.Record(name=contr["name"]).add_parent(contrib_rt)
+        rec.add_property(full_name_prop, value=contr["name"])
+        rec.add_property(uuid_prop, value=contr["uuid"])
+        if "email" in contr and contr["email"]:
+            rec.add_property(email_prop, value=contr["email"])
+        if "orcid" in contr and contr["orcid"]:
+            rec.add_property(orcid_prop, value=contr["orcid"])
         inserts.append(rec)
 
     if inserts:
@@ -55,9 +73,6 @@ def insert_contributors(list_of_names: list[str], create_model: bool = False):
 
 if __name__ == "__main__":
 
-    test_names = [
-        "Sarah Scientist",
-        "John Doe"
-    ]
+    contribs = get_contributors()
 
-    insert_contributors(test_names, True)
+    insert_contributors(contribs, True)
