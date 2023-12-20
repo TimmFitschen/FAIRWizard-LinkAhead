@@ -73,6 +73,6 @@ def insert_contributors(list_of_contribs: list[dict], create_model: bool = False
 
 if __name__ == "__main__":
 
-    contribs = get_contributors()
+    contribs = get_contributors(project_uuid='ae8496de-b75d-4226-a04a-cee6f0869878')
 
     insert_contributors(contribs, True)
